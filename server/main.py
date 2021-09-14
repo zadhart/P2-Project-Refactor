@@ -9,14 +9,19 @@ But I am already saved, for the Machine is immortal...
 ...even in death I serve the Omnissiah
 """
 
+import copy
 from flask import request
 from create_app import db, app
-from Change import Change
 from Empregado import Empregado
 from Pagamentos import Pagamentos
 from Pontos import Pontos
 from Vendas import Vendas
 from Sindicato import Sindicato
+from Tcard_change import Tcard_change
+from Sell_change import Sell_change
+from Update_change import Update_change
+from Add_employee_change import Add_employee_change
+from Rmv_employee_change import Rmv_employee_change
 
 last_changes = []
 
@@ -33,10 +38,7 @@ def add_employee():
 
     db.session.add(new_employee)
 
-    last_changes.append(Change(prev_data=None,
-                                         new_data=new_employee,
-                                         change_function="add_employee",
-                                         undo_function="rmv_employee"))
+    last_changes.append(Add_employee_change(prev_data=None, new_data=new_employee))
 
     newSind = Sindicato(
         id=new_employee.id,
@@ -72,10 +74,9 @@ def rmv_employee():
 
     obj = db.session.query(Empregado).filter(Empregado.id == content["id"]).first()
 
-    last_changes.append(Change(prev_data=obj,
-                               new_data=None,
-                               change_function="rmv_employee",
-                               undo_function="add_employee"))
+    save_obj = copy.deepcopy(obj)
+
+    last_changes.append(Rmv_employee_change(prev_data=save_obj, new_data=None))
 
     db.session.delete(obj)
     db.session.commit()
@@ -97,10 +98,7 @@ def sell():
 
     db.session.add(sell)
 
-    last_changes.append(Change(prev_data=sell,
-                               new_data=None,
-                               change_function="sell",
-                               undo_function="cancel_sell"))
+    last_changes.append(Sell_change(prev_data=sell, new_data=None))
 
     db.session.commit()
 
@@ -122,10 +120,7 @@ def read_tcard():
 
     db.session.add(card)
 
-    last_changes.append(Change(prev_data=card,
-                               new_data=None,
-                               change_function="read_tcard",
-                               undo_function="unread_tcard"))
+    last_changes.append(Tcard_change(prev_data=card, new_data=None))
 
     db.session.commit()
 
@@ -159,10 +154,7 @@ def update():
     funcSindicato.taxa_add = content["taxa_add"]
     funcSindicato.membro = content["sindicato"]
 
-    last_changes.append(Change(prev_data=old_one,
-                               new_data=funcionario,
-                               change_function="update",
-                               undo_function="undo_update"))
+    last_changes.append(Update_change(prev_data=old_one, new_data=funcionario))
 
     db.session.commit()
 
