@@ -22,6 +22,9 @@ from Sell_change import Sell_change
 from Update_change import Update_change
 from Add_employee_change import Add_employee_change
 from Rmv_employee_change import Rmv_employee_change
+from Daily_payment import Daily_payment
+from Daily_payment_horistas import Daily_payment_horistas
+from Daily_payment_comissionados import Daily_payment_comissionados
 
 last_changes = []
 
@@ -174,116 +177,20 @@ def Run():
     result = 0
     content = request.get_json()
 
-    # Encontrando todos os empregados assalariados que recebem mensalmente
-    assalariados = db.session.query(Pagamentos).filter(Pagamentos.tipo == "Assalariado",
-                                                Pagamentos.comissao == 0,
-                                                Pagamentos.salarioHora == 0,
-                                                Pagamentos.diaMes == content["diaMes"],
-                                                Pagamentos.tipoSem == "NaN",
-                                                Pagamentos.diaSem == "NaN").all()
+    # Calculando o salario dos assalariados
+    assalariados = Daily_payment(content)
 
+    result += assalariados.Run()
 
-    for i in assalariados:
-        result += i.salario
+    # Calculando o salario dos horistas
+    horistas = Daily_payment_horistas(content)
 
-    # Encontrando todos os empregados assalariados que recebem semanalmente
-    assalariados = db.session.query(Pagamentos).filter(Pagamentos.tipo == "Assalariado",
-                                                       Pagamentos.comissao == 0,
-                                                       Pagamentos.salarioHora > 0,
-                                                       Pagamentos.diaSem == content["diaSem"],
-                                                       Pagamentos.tipoSem == content["tipoSem"],
-                                                       Pagamentos.diaMes == 0).all()
+    result += horistas.Run()
 
+    # Calculando o salario dos comissionados
+    comissionados = Daily_payment_comissionados(content)
 
-    for i in assalariados:
-        result += i.salario
-
-    # Encontrando todos os empregados horistas que recebem mensalmente
-    horistas = db.session.query(Pagamentos).filter(Pagamentos.tipo == "Horista",
-                                                       Pagamentos.comissao == 0,
-                                                       Pagamentos.salarioHora != 0,
-                                                       Pagamentos.diaMes == content["diaMes"],
-                                                       Pagamentos.tipoSem == "NaN",
-                                                       Pagamentos.diaSem == "NaN").all()
-
-
-    for i in horistas:
-
-        horas = db.session.query(Pontos).filter(Pontos.id == str(i.id),
-                                                Pontos.mes == content["mes"],
-                                                Pontos.semana == content["semana"]).all()
-        horas_trab = 0
-
-        for h in horas:
-            horas_trab += h.horasTrabalhadas
-
-        horas_bonus = 0
-
-        if horas_trab > 160:
-            horas_bonus = horas_trab - 160
-            horas_trab = horas_trab - 160
-
-        result += i.salarioHora * horas_trab
-        result += i.salarioHora * horas_bonus * 1.5
-
-    # Encontrando todos os empregados horistas que recebem mensalmente
-    horistas = db.session.query(Pagamentos).filter(Pagamentos.tipo == "Horista",
-                                                   Pagamentos.comissao == 0,
-                                                   Pagamentos.salarioHora != 0,
-                                                   Pagamentos.diaMes == 0,
-                                                   Pagamentos.tipoSem == content["tipoSem"],
-                                                   Pagamentos.diaSem == content["diaSem"]).all()
-
-    for i in horistas:
-
-        horas = db.session.query(Pontos).filter(Pontos.id == str(i.id), Pontos.mes == content["mes"]).all()
-
-        horas_trab = 0
-
-        for h in horas:
-            horas_trab += h.horasTrabalhadas
-
-        horas_bonus = 0
-
-        if horas_trab > 160:
-            horas_bonus = horas_trab - 160
-            horas_trab = horas_trab - 160
-
-        result += i.salarioHora * horas_trab
-        result += i.salarioHora * horas_bonus * 1.5
-
-    # Encontrando todos os empregados comissionados que recebem mensalmente
-    comissionados = db.session.query(Pagamentos).filter(Pagamentos.tipo == "Comissionado",
-                                                   Pagamentos.comissao != 0,
-                                                   Pagamentos.salarioHora == 0,
-                                                   Pagamentos.diaMes == content["diaMes"],
-                                                   Pagamentos.tipoSem == "NaN",
-                                                   Pagamentos.diaSem == "NaN").all()
-
-    for i in comissionados:
-
-        vendas = db.session.query(Vendas).filter(Vendas.id == str(i.id), Vendas.mes == content["mes"]).all()
-
-        for v in vendas:
-
-            result += v.valor * i.comissao
-
-    # Encontrando todos os empregados comissionados que recebem mensalmente
-    comissionados = db.session.query(Pagamentos).filter(Pagamentos.tipo == "Comissionado",
-                                                        Pagamentos.comissao != 0,
-                                                        Pagamentos.salarioHora == 0,
-                                                        Pagamentos.diaMes == 0,
-                                                        Pagamentos.tipoSem == content["tipoSem"],
-                                                        Pagamentos.diaSem == content["diaSem"]).all()
-
-    for i in comissionados:
-        vendas = db.session.query(Vendas).filter(Vendas.id == str(i.id),
-                                                 Vendas.mes == content["mes"],
-                                                 Vendas.semana == content["semana"]).all()
-
-        for v in vendas:
-
-            result += v.valor * i.comissao
+    result += comissionados.Run()
 
     return str(result)
 
