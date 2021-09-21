@@ -41,7 +41,7 @@ def add_employee():
 
     db.session.add(new_employee)
 
-    last_changes.append(Add_employee_change(prev_data=None, new_data=new_employee))
+    last_changes.append(Add_employee_change(prev_data=new_employee, new_data=None))
 
     newSind = Sindicato(
         id=new_employee.id,
